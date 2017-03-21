@@ -7,5 +7,6 @@
 coursera-ml/**/lib/
 coursera-ml/**/token.mat
 coursera-ml/**/submit.m
+coursera-ml/**/*__ignored.*
 
 
