@@ -9,7 +9,6 @@ def sigmoid(z):
     return 1 / (1 + np.exp(-z))
 
 
-# TODO: Implement regularization
 class LogisticClassification():
 
     def __init__(self):
@@ -17,24 +16,31 @@ class LogisticClassification():
         self.cost_history = np.zeros(1)
 
     @staticmethod
-    def compute_cost(X, y, theta):
+    def compute_cost(X, y, theta, regularization_param=0):
+        # Workaround for fit_using_minimize_function()
+        # When using op.minimize(), theta.shape is somehow not correct
+        theta = theta.reshape(-1, 1)
+
         n_examples = X.shape[0]
         hx = sigmoid(X.dot(theta))
+        theta_first_is_zero = theta.copy()
+        theta_first_is_zero[0][0] = 0
 
         # 1/m * [-y' * log(hx) - (1-y)' * log(1-hx)]
         return 1.0 / n_examples * (
             -y.T.dot(np.log(hx)) - (1 - y).T.dot(np.log(1 - hx))
+            + regularization_param * theta_first_is_zero.T.dot(theta_first_is_zero)
         )
 
-    def fit_using_minimize_function(self, X, y):
+    def fit_using_minimize_function(self, X, y, regularization_param=0):
         # Prepend column ones
         X = np.insert(X, 0, 1, axis=1)
 
         def compute_cost_givenXy(theta):
-            return self.compute_cost(X, y, theta)
+            return self.compute_cost(X, y, theta, regularization_param)
 
-        n_examples, nFeatures = X.shape
-        initial_theta = np.zeros((nFeatures, 1))     # Initial guess
+        n_examples, n_features = X.shape
+        initial_theta = np.zeros((n_features, 1))     # Initial guess
 
         optimization_result = op.minimize(compute_cost_givenXy, initial_theta, options={
             'maxiter': 400,     # Hardcode for now
@@ -46,7 +52,7 @@ class LogisticClassification():
 
         self.theta = optimization_result.x.T.reshape(-1, 1)    # The result returned from optimize() is a row vector
 
-    def fit_using_gradient_descent(self, X, y, learning_rate, n_iterations):
+    def fit_using_gradient_descent(self, X, y, learning_rate, n_iterations, regularization_param=0):
         # Prepend column ones
         X = np.insert(X, 0, 1, axis=1)
 
@@ -55,9 +61,12 @@ class LogisticClassification():
         self.theta = np.zeros((n_features, 1))
         self.cost_history = np.zeros((n_iterations, 1))
 
+        theta_first_is_zero = self.theta.copy()
+        theta_first_is_zero[0][0] = 0
+
         for idx in range(0, n_iterations):
             hx = sigmoid(X.dot(self.theta))
-            self.theta -= X.T.dot(hx - y) * (learning_rate / n_examples)
+            self.theta -= (learning_rate / n_examples) * (X.T.dot(hx - y) + regularization_param * theta_first_is_zero)
             self.cost_history[idx, 0] = self.compute_cost(X, y, self.theta).item()
 
     def classify(self, X):
@@ -71,7 +80,7 @@ class LogisticClassification():
             return boundary_x, boundary_y
         else:
             # TODO: Use contour plot
-            raise Exception('Not yet implement decision boundary in which length(theta > 3')
+            print('Not yet implement decision boundary in which length(theta > 3')
 
 
 if __name__ == '__main__':
@@ -89,8 +98,8 @@ if __name__ == '__main__':
 
     # Training
     try:
-        # clf.fit_using_minimize_function(X_train, y_train)
-        clf.fit_using_gradient_descent(X_train, y_train, learning_rate=0.01, n_iterations=1000)
+        # clf.fit_using_minimize_function(X_train, y_train, regularization_param=1)
+        clf.fit_using_gradient_descent(X_train, y_train, learning_rate=0.01, n_iterations=1000, regularization_param=0)
         print('Training finished. Found theta = ', clf.theta)
     except Exception as error:
         print('Fail to fit the training data. error: ', error)
