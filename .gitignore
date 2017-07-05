@@ -4,6 +4,9 @@
 .idea/
 *.ipynb_checkpoints*
 
+# virtualenv
+.env/
+
 # Coursera
 coursera-ml/**/lib/
 coursera-ml/**/token.mat
